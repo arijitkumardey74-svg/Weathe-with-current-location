@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather App</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(to bottom, #4facfe, #00f2fe);
+      color: white;
+      text-align: center;
+      transition: background 1s ease;
+    }
+
+    .container {
+      margin-top: 60px;
+    }
+
+    .search-box {
+      margin: 20px;
+    }
+
+    input {
+      padding: 10px;
+      width: 200px;
+      border: none;
+      border-radius: 8px;
+      outline: none;
+    }
+
+    button {
+      padding: 10px 15px;
+      margin-left: 5px;
+      border: none;
+      background: #0066ff;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0048b4;
+    }
+
+    .weather-box, .forecast-box {
+      margin-top: 30px;
+    }
+
+    .forecast-day {
+      display: inline-block;
+      margin: 10px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      width: 150px;
+    }
+
+    .icon {
+      width: 64px;
+      height: 64px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌦️ Weather App</h1>
+
+    <div class="search-box">
+      <input type="text" id="cityInput" placeholder="Enter city name..." />
+      <button id="searchBtn">Search</button>
+      <button id="locBtn">📍 My Location</button>
+    </div>
+
+    <div id="weatherResult" class="weather-box"></div>
+    <div id="forecast" class="forecast-box"></div>
+  </div>
+
+  <script>
+    const apiKey = "f8aadc3f32b14870a2953810253010";
+    const weatherBox = document.getElementById("weatherResult");
+    const forecastBox = document.getElementById("forecast");
+    const cityInput = document.getElementById("cityInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const locBtn = document.getElementById("locBtn");
+
+    // Auto-load weather on page load using user's location
+    window.onload = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showPosition, () => {
+          weatherBox.innerHTML = "<p>Please allow location access or search manually.</p>";
+        });
+      } else {
+        weatherBox.innerHTML = "<p>Geolocation not supported.</p>";
+      }
+    };
+
+    searchBtn.addEventListener("click", () => {
+      const city = cityInput.value.trim();
+      if (city) getWeatherByCity(city);
+    });
+
+    locBtn.addEventListener("click", () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showPosition, showError);
+      } else {
+        alert("Geolocation not supported by this browser.");
+      }
+    });
+
+    function showPosition(position) {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      getWeatherByCoords(lat, lon);
+    }
+
+    function showError(error) {
+      alert("Unable to get your location. Please allow location access or search manually.");
+    }
+
+    async function getWeatherByCity(city) {
+      const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${city}&days=3&aqi=yes`;
+      fetchWeather(url);
+    }
+
+    async function getWeatherByCoords(lat, lon) {
+      const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${lat},${lon}&days=3&aqi=yes`;
+      fetchWeather(url);
+    }
+
+    async function fetchWeather(url) {
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const cityName = data.location.name;
+        const tempC = data.current.temp_c;
+        const condition = data.current.condition.text;
+        const icon = data.current.condition.icon;
+
+        weatherBox.innerHTML = `
+          <h2>${cityName}</h2>
+          <img src="https:${icon}" alt="${condition}" class="icon">
+          <p><strong>${tempC}°C</strong></p>
+          <p>${condition}</p>
+        `;
+
+        forecastBox.innerHTML = "<h3>3-Day Forecast</h3>";
+        data.forecast.forecastday.forEach(day => {
+          const date = new Date(day.date).toDateString();
+          forecastBox.innerHTML += `
+            <div class="forecast-day">
+              <h4>${date}</h4>
+              <img src="https:${day.day.condition.icon}" alt="${day.day.condition.text}" class="icon">
+              <p>${day.day.avgtemp_c}°C</p>
+              <p>${day.day.condition.text}</p>
+            </div>
+          `;
+        });
+
+        changeBackground(condition);
+      } catch (error) {
+        weatherBox.innerHTML = `<p>City not found. Please try again.</p>`;
+      }
+    }
+
+    function changeBackground(condition) {
+      let bg;
+      condition = condition.toLowerCase();
+
+      if (condition.includes("rain")) bg = "linear-gradient(to bottom, #667db6, #0082c8, #0082c8, #667db6)";
+      else if (condition.includes("cloud")) bg = "linear-gradient(to bottom, #757f9a, #d7dde8)";
+      else if (condition.includes("sun") || condition.includes("clear")) bg = "linear-gradient(to bottom, #f7971e, #ffd200)";
+      else if (condition.includes("snow")) bg = "linear-gradient(to bottom, #83a4d4, #b6fbff)";
+      else bg = "linear-gradient(to bottom, #4facfe, #00f2fe)";
+
+      document.body.style.background = bg;
+    }
+  </script>
+</body>
+</html>
